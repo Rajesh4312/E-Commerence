@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  // use DATABASE_URL from .env.local, e.g. "file:./prisma/dev.db"
+  url      = env("DATABASE_URL")
+}
+
+// --------- Catalog ---------
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  products Product[]
+}
+
+model Product {
+  id          String         @id @default(cuid())
+  name        String
+  slug        String         @unique
+  description String?
+  priceCents  Int
+  currency    String         @default("INR")
+  stock       Int            @default(0)
+  active      Boolean        @default(true)
+  category    Category       @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  images      ProductImage[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  OrderItem   OrderItem[]
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  url       String
+  alt       String?
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+}
+
+// --------- Users / Addresses ---------
+model User {
+  id               String    @id @default(cuid())
+  name             String?
+  email            String?   @unique
+  emailVerified    DateTime?
+  image            String?
+  stripeCustomerId String?
+
+  addresses Address[]
+  orders    Order[]
+
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  name      String
+  phone     String?
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  pincode   String
+  createdAt DateTime @default(now())
+}
+
+// --------- Orders ---------
+model Order {
+  id            String      @id @default(cuid())
+  user          User        @relation(fields: [userId], references: [id])
+  userId        String
+  totalCents    Int
+  currency      String      @default("INR")
+  status        String      @default("created")
+  stripeSession String? // Stripe Checkout session id
+  items         OrderItem[]
+  createdAt     DateTime    @default(now())
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  order      Order   @relation(fields: [orderId], references: [id])
+  orderId    String
+  product    Product @relation(fields: [productId], references: [id])
+  productId  String
+  quantity   Int     @default(1)
+  priceCents Int
+  currency   String  @default("INR")
+}
+
+// --------- NextAuth required models ---------
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
