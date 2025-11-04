@@ -47,4 +47,8 @@ export async function POST(req: Request) {
 }
 
 // Disable Next.js body parsing so we can verify signature on the raw body
-export const config = { api: { bodyParser: false } } as any;
+export const config = {
+  api: {
+    bodyParser: false, // Required for raw stream
+  },
+};
